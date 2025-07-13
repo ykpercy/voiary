@@ -1,0 +1,362 @@
+// components/Voiary.tsx
+
+'use client';
+
+import React, { useState, useRef, useEffect } from 'react';
+import { Mic, MicOff, Play, Pause, Search, Shuffle, Clock, Calendar } from 'lucide-react';
+
+// Step 1: Define an interface for the diary entry object
+interface DiaryEntry {
+  id: number;
+  date: string;
+  time: string;
+  duration: number;
+  audioUrl: string | null;
+  transcript: string;
+  timestamp: number;
+}
+
+const VoiceDiary = () => {
+  // Step 2: Use the interface to type the state. This fixes the error.
+  const [diaryEntries, setDiaryEntries] = useState<DiaryEntry[]>([]);
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [currentlyPlaying, setCurrentlyPlaying] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const audioRefs = useRef<Record<number, HTMLAudioElement | null>>({});
+
+  // Mock initial diary data
+  useEffect(() => {
+    const mockEntries: DiaryEntry[] = [
+      {
+        id: 1,
+        date: '2024-07-10',
+        time: '23:30',
+        duration: 120,
+        audioUrl: null,
+        transcript: '今天工作很充实，完成了一个重要的项目。晚上和朋友聊天很开心。',
+        timestamp: new Date('2024-07-10 23:30').getTime()
+      },
+      {
+        id: 2,
+        date: '2024-07-09',
+        time: '22:45',
+        duration: 95,
+        audioUrl: null,
+        transcript: '今天天气很好，下午去公园散步了。看到很多人在锻炼，感觉很有活力。',
+        timestamp: new Date('2024-07-09 22:45').getTime()
+      },
+      {
+        id: 3,
+        date: '2024-07-08',
+        time: '23:15',
+        duration: 180,
+        audioUrl: null,
+        transcript: '周末在家里整理房间，发现了很多有趣的老照片。回忆满满。',
+        timestamp: new Date('2024-07-08 23:15').getTime()
+      }
+    ];
+    setDiaryEntries(mockEntries);
+  }, []);
+
+  // Start recording
+  const startRecording = async () => {
+    // ... (rest of your code remains the same)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+      
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        const newEntry: DiaryEntry = {
+          id: Date.now(),
+          date: new Date().toISOString().split('T')[0],
+          time: new Date().toTimeString().slice(0, 5),
+          duration: recordingTime,
+          audioUrl: audioUrl,
+          transcript: '正在转录中...',
+          timestamp: Date.now()
+        };
+        
+        setDiaryEntries(prev => [newEntry, ...prev]);
+        
+        // Simulate speech-to-text
+        setTimeout(() => {
+          setDiaryEntries(prev => prev.map(entry => 
+            entry.id === newEntry.id 
+              ? { ...entry, transcript: '这是刚刚录制的语音日记内容。' }
+              : entry
+          ));
+        }, 2000);
+        
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Recording failed:', error);
+    }
+  };
+
+  // Stop recording
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+    }
+  };
+
+  // Toggle audio playback
+  const togglePlayback = (entryId: number) => {
+    const audio = audioRefs.current[entryId];
+    if (!audio) return;
+    
+    const isCurrentlyPlaying = currentlyPlaying === entryId;
+
+    // Pause all other audio
+    Object.values(audioRefs.current).forEach(a => {
+        if (a && a !== audio) {
+            a.pause();
+        }
+    });
+    
+    if (isCurrentlyPlaying) {
+      audio.pause();
+      setCurrentlyPlaying(null);
+    } else {
+      audio.currentTime = 0; // Start from the beginning
+      audio.play();
+      setCurrentlyPlaying(entryId);
+    }
+  };
+  
+  // ... The rest of your component logic ...
+  // (No other changes are needed for this specific error)
+    // 随机播放
+  const randomPlay = () => {
+    const playableEntries = diaryEntries.filter(entry => entry.audioUrl);
+    if (playableEntries.length === 0) return;
+    
+    const randomEntry = playableEntries[Math.floor(Math.random() * playableEntries.length)];
+    togglePlayback(randomEntry.id);
+  };
+
+  // 格式化时间
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // 格式化日期
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+      return '今天';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return '昨天';
+    } else {
+      return `${date.getMonth() + 1}月${date.getDate()}日`;
+    }
+  };
+
+  // 过滤日记条目
+  const filteredEntries = diaryEntries.filter(entry => 
+    entry.transcript.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    entry.date.includes(searchQuery)
+  );
+  
+  // Attach event listeners for when audio ends
+  useEffect(() => {
+    const handleEnded = (id: number) => {
+      if (currentlyPlaying === id) {
+        setCurrentlyPlaying(null);
+      }
+    };
+
+    Object.entries(audioRefs.current).forEach(([id, audio]) => {
+      if (audio) {
+        const onEndedCallback = () => handleEnded(Number(id));
+        audio.addEventListener('ended', onEndedCallback);
+        
+        return () => { // Cleanup function
+          audio.removeEventListener('ended', onEndedCallback);
+        };
+      }
+    });
+  }, [currentlyPlaying]);
+
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50">
+      {/* Header */}
+      <div className="bg-white/80 backdrop-blur-sm border-b border-orange-100 px-4 py-6">
+        <div className="max-w-md mx-auto">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-orange-800">语音日记</h1>
+              <p className="text-orange-600 text-sm mt-1">记录每一天的美好时光</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowSearch(!showSearch)}
+                className="p-2 rounded-full bg-orange-100 hover:bg-orange-200 transition-colors"
+              >
+                <Search className="h-5 w-5 text-orange-600" />
+              </button>
+              <button
+                onClick={randomPlay}
+                className="p-2 rounded-full bg-orange-100 hover:bg-orange-200 transition-colors"
+              >
+                <Shuffle className="h-5 w-5 text-orange-600" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-md mx-auto px-4 py-6">
+        {/* Search Input */}
+        {showSearch && (
+          <div className="mb-6 animate-in slide-in-from-top-2">
+            <input
+              type="text"
+              placeholder="搜索日记内容或日期..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-3 rounded-2xl border border-orange-200 focus:border-orange-400 focus:outline-none bg-white/80 backdrop-blur-sm"
+            />
+          </div>
+        )}
+
+        {/* Recording UI */}
+        <div className="mb-8 text-center">
+          <div className="relative">
+            <button
+              onClick={isRecording ? stopRecording : startRecording}
+              className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 ${
+                isRecording 
+                  ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
+                  : 'bg-orange-500 hover:bg-orange-600 shadow-lg hover:shadow-xl'
+              }`}
+            >
+              {isRecording ? (
+                <MicOff className="h-8 w-8 text-white" />
+              ) : (
+                <Mic className="h-8 w-8 text-white" />
+              )}
+            </button>
+            
+            {isRecording && (
+              <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2">
+                <div className="bg-red-500 text-white px-3 py-1 rounded-full text-sm">
+                  {formatTime(recordingTime)}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <p className="text-orange-700 mt-6 text-lg">
+            {isRecording ? '正在录制...' : '点击开始录制今天的日记'}
+          </p>
+        </div>
+
+        {/* Diary List */}
+        <div className="space-y-4">
+          {filteredEntries.map((entry) => (
+            <div
+              key={entry.id}
+              className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 shadow-sm border border-orange-100 hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2 text-orange-600">
+                  <Calendar className="h-4 w-4" />
+                  <span className="font-medium">{formatDate(entry.date)}</span>
+                  <Clock className="h-4 w-4 ml-2" />
+                  <span className="text-sm">{entry.time}</span>
+                </div>
+                <div className="text-sm text-orange-500">
+                  {formatTime(entry.duration)}
+                </div>
+              </div>
+              
+              <p className="text-gray-700 mb-3 line-clamp-3">
+                {entry.transcript}
+              </p>
+              
+              {entry.audioUrl && (
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => togglePlayback(entry.id)}
+                    className="p-2 rounded-full bg-orange-100 hover:bg-orange-200 transition-colors"
+                  >
+                    {currentlyPlaying === entry.id ? (
+                      <Pause className="h-4 w-4 text-orange-600" />
+                    ) : (
+                      <Play className="h-4 w-4 text-orange-600" />
+                    )}
+                  </button>
+                  
+                  <audio
+                    ref={el => {audioRefs.current[entry.id] = el}}
+                    src={entry.audioUrl}
+                    onEnded={() => setCurrentlyPlaying(null)}
+                    className="hidden"
+                  />
+                  
+                  <div className="flex-1 h-1 bg-orange-100 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-orange-400 rounded-full"
+                      style={{ width: '0%' }} // Note: A simple progress bar is complex with just CSS. This is a visual placeholder.
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {filteredEntries.length === 0 && searchQuery && (
+          <div className="text-center py-12">
+            <p className="text-orange-500">没有找到相关的日记记录</p>
+          </div>
+        )}
+
+        {diaryEntries.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-orange-500">还没有日记记录，开始你的第一条语音日记吧！</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default VoiceDiary;
