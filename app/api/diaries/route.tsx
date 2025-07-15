@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
     const newEntryData = {
       duration: parseInt(duration, 10),
       audio_url: audioUrl,
-      transcript: '这是刚刚录制的语音日记内容 (来自 Supabase)。',
+      transcript: '这是刚刚录制的语音日记内容。',
     };
     
     const { data: dbData, error: dbError } = await supabase
