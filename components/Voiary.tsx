@@ -4,26 +4,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Mic, MicOff, Play, Pause, Search, Shuffle, Clock, Calendar } from 'lucide-react';
-import { openDB, DBSchema } from 'idb';
-
-// 步骤 2: 定义数据库的结构（Schema），这有助于 TypeScript 类型检查
-interface DiaryDB extends DBSchema {
-  'diary-entries': {
-    key: number;
-    value: DiaryEntry;
-  };
-}
-
-// 步骤 3: 在组件外部，初始化数据库连接。
-// 这会返回一个 Promise，我们可以在组件内部 await 它。
-const dbPromise = openDB<DiaryDB>('voiary-database', 1, {
-  upgrade(db) {
-    // 当数据库首次创建或版本升级时，这个函数会被调用
-    db.createObjectStore('diary-entries', {
-      keyPath: 'id', // 使用日记的 id 作为主键
-    });
-  },
-});
 
 
 // Step 1: Define an interface for the diary entry object
@@ -32,7 +12,7 @@ interface DiaryEntry {
   date: string;
   time: string;
   duration: number;
-  audioBlob?: Blob; // 在数据库中我们存储 Blob
+  // audioBlob?: Blob; // 在数据库中我们存储 Blob
   audioUrl: string | null;
   transcript: string;
   timestamp: number;
@@ -41,6 +21,7 @@ interface DiaryEntry {
 const VoiceDiary = () => {
   // Step 2: Use the interface to type the state. This fixes the error.
   const [diaryEntries, setDiaryEntries] = useState<DiaryEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true); // 新增 loading 状态
 
   const [isRecording, setIsRecording] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<number | null>(null);
@@ -71,68 +52,28 @@ const VoiceDiary = () => {
       console.error('浏览器不支持任何可用的录音格式');
       // 在这里可以向用户显示错误提示
     }
-
-    const mockEntries: DiaryEntry[] = [
-      {
-        id: 1,
-        date: '2024-07-10',
-        time: '23:30',
-        duration: 120,
-        audioUrl: null,
-        transcript: '今天工作很充实，完成了一个重要的项目。晚上和朋友聊天很开心。',
-        timestamp: new Date('2024-07-10 23:30').getTime()
-      },
-      {
-        id: 2,
-        date: '2024-07-09',
-        time: '22:45',
-        duration: 95,
-        audioUrl: null,
-        transcript: '今天天气很好，下午去公园散步了。看到很多人在锻炼，感觉很有活力。',
-        timestamp: new Date('2024-07-09 22:45').getTime()
-      },
-      {
-        id: 3,
-        date: '2024-07-08',
-        time: '23:15',
-        duration: 180,
-        audioUrl: null,
-        transcript: '周末在家里整理房间，发现了很多有趣的老照片。回忆满满。',
-        timestamp: new Date('2024-07-08 23:15').getTime()
+    
+    // 从后端 API 获取数据
+    async function fetchEntries() {
+      setIsLoading(true);
+      try {
+        const response = await fetch('/api/diaries'); // 直接使用相对路径
+        if (!response.ok) {
+          throw new Error('网络响应失败');
+        }
+        const entriesFromApi: DiaryEntry[] = await response.json();
+        setDiaryEntries(entriesFromApi);
+      } catch (error) {
+        console.error("无法从服务器获取日记:", error);
+      } finally {
+        setIsLoading(false);
       }
-    ];
-    setDiaryEntries(mockEntries);
-  }, []);
-
-  // 步骤 4: 组件首次加载时，从 IndexedDB 读取历史数据
-  useEffect(() => {
-    async function loadEntriesFromDB() {
-      const db = await dbPromise;
-      const entriesFromDb = await db.getAll('diary-entries');
-      
-      // 将从数据库读出的 Blob 转换为可播放的 URL
-      const entriesWithUrl = entriesFromDb.map(entry => ({
-        ...entry,
-        audioUrl: entry.audioBlob ? URL.createObjectURL(entry.audioBlob) : null,
-      }));
-
-      // 按时间倒序排序
-      setDiaryEntries(entriesWithUrl.sort((a, b) => b.timestamp - a.timestamp));
     }
 
-    loadEntriesFromDB();
+    fetchEntries();
   }, []);
 
-  // 步骤 5: 组件卸载时，清理所有创建的 Object URL 以防止内存泄漏
-  useEffect(() => {
-    return () => {
-      diaryEntries.forEach(entry => {
-        if (entry.audioUrl) {
-          URL.revokeObjectURL(entry.audioUrl);
-        }
-      });
-    };
-  }, [diaryEntries]);
+
 
   // Start recording
   const startRecording = async () => {
@@ -157,59 +98,10 @@ const VoiceDiary = () => {
         }
       };
       
-      // mediaRecorderRef.current.onstop = () => {
-      mediaRecorderRef.current.onstop = async () => { // 注意这里是 async 函数
+      mediaRecorderRef.current.onstop = () => {
+      // mediaRecorderRef.current.onstop = async () => { // 注意这里是 async 函数
         // const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        // 使用与录制时相同的 MIME 类型创建 Blob
-        const audioBlob = new Blob(audioChunksRef.current, { type: supportedMimeType });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const newId = Date.now();
-        
-        const newEntry: DiaryEntry = {
-          id: newId,
-          date: new Date().toISOString().split('T')[0],
-          time: new Date().toTimeString().slice(0, 5),
-          duration: recordingTime,
-          audioBlob: audioBlob, // 直接保存 Blob 对象
-          audioUrl: audioUrl,
-          transcript: '正在转录中...',
-          timestamp: Date.now()
-        };
-
-        // 存入 IndexedDB
-        const db = await dbPromise;
-        await db.put('diary-entries', newEntry);
-
-        // 为了在界面上立即显示并播放，我们创建一个临时 URL
-        const entryForState = {
-          ...newEntry,
-          audioUrl: URL.createObjectURL(newEntry.audioBlob!),
-        };
-        
-        // setDiaryEntries(prev => [newEntry, ...prev]);
-        // 更新组件状态，新日记会显示在列表顶部
-        setDiaryEntries(prev => [entryForState, ...prev]);
-        
-        // Simulate speech-to-text
-        // setTimeout(() => {
-        //   setDiaryEntries(prev => prev.map(entry => 
-        //     entry.id === newEntry.id 
-        //       ? { ...entry, transcript: '这是刚刚录制的语音日记内容。' }
-        //       : entry
-        //   ));
-        // }, 2000);
-
-        // 模拟语音转文字（在真实应用中，这部分也应更新到数据库）
-        setTimeout(async () => {
-          const updatedTranscript = '这是刚刚录制的语音日记内容。';
-          // 更新数据库中的转录
-          await db.put('diary-entries', { ...newEntry, transcript: updatedTranscript });
-          // 更新界面上的转录
-          setDiaryEntries(prev => prev.map(entry => 
-            entry.id === newId ? { ...entry, transcript: updatedTranscript } : entry
-          ));
-        }, 2000);
-        
+    
         stream.getTracks().forEach(track => track.stop());
       };
       
@@ -229,13 +121,52 @@ const VoiceDiary = () => {
   };
 
   // Stop recording
+  // const stopRecording = () => {
+  //   if (mediaRecorderRef.current && isRecording) {
+  //     mediaRecorderRef.current.stop();
+  //     setIsRecording(false);
+  //     if (recordingIntervalRef.current) {
+  //       clearInterval(recordingIntervalRef.current);
+  //     }
+  //   }
+  // };
+  // 改造 2: 停止录音时，将文件上传到服务器
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: supportedMimeType });
+        
+        const formData = new FormData();
+        // 'audio' 必须和后端 API Route 中 `formData.get('audio')` 的键名一致
+        formData.append('audio', audioBlob, 'diary-recording.webm'); 
+        formData.append('duration', String(recordingTime));
+
+        // 停止计时器和录制状态
+        if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+        setIsRecording(false);
+
+        try {
+          // 发送数据到我们的 API Route
+          const response = await fetch('/api/diaries', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error('文件上传失败');
+          }
+
+          const newEntryFromServer = await response.json();
+          // 将服务器返回的新条目添加到列表顶部，实现即时更新
+          setDiaryEntries(prev => [newEntryFromServer, ...prev]);
+
+        } catch (error) {
+          console.error("上传录音失败:", error);
+          alert('抱歉，上传录音失败，请稍后重试。');
+        }
+      };
+      
       mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current);
-      }
     }
   };
 
@@ -322,6 +253,15 @@ const VoiceDiary = () => {
       }
     });
   }, [currentlyPlaying]);
+
+  // JSX 渲染部分保持不变，但可以增加 Loading 状态显示
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50">
+        <p className="text-orange-600 text-lg animate-pulse">正在加载日记...</p>
+      </div>
+    );
+  }
 
 
   return (
