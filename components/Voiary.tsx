@@ -25,6 +25,8 @@ const VoiceDiary = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  // 新增一个 state 来存储浏览器支持的 MIME 类型
+  const [supportedMimeType, setSupportedMimeType] = useState('');
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -33,6 +35,21 @@ const VoiceDiary = () => {
 
   // Mock initial diary data
   useEffect(() => {
+    // 按优先级排列，mp4 优先用于 iOS
+    const mimeTypes = [
+      'audio/mp4',
+      'audio/webm;codecs=opus',
+      'audio/webm',
+    ];
+    const foundSupportedMimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type));
+
+    if (foundSupportedMimeType) {
+      setSupportedMimeType(foundSupportedMimeType);
+    } else {
+      console.error('浏览器不支持任何可用的录音格式');
+      // 在这里可以向用户显示错误提示
+    }
+
     const mockEntries: DiaryEntry[] = [
       {
         id: 1,
@@ -68,17 +85,30 @@ const VoiceDiary = () => {
   // Start recording
   const startRecording = async () => {
     // ... (rest of your code remains the same)
+    if (!supportedMimeType) {
+      alert('抱歉，您的浏览器不支持录音功能。');
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      // mediaRecorderRef.current = new MediaRecorder(stream);
+      // 使用检测到的 MIME 类型初始化 MediaRecorder
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: supportedMimeType });
       audioChunksRef.current = [];
       
       mediaRecorderRef.current.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
+        // audioChunksRef.current.push(event.data);
+        // 重要：检查数据块是否为空，防止录制出静音文件
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
       };
       
       mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        // const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        // 使用与录制时相同的 MIME 类型创建 Blob
+        const audioBlob = new Blob(audioChunksRef.current, { type: supportedMimeType });
         const audioUrl = URL.createObjectURL(audioBlob);
         
         const newEntry: DiaryEntry = {
@@ -115,6 +145,8 @@ const VoiceDiary = () => {
       
     } catch (error) {
       console.error('Recording failed:', error);
+      // 向用户提供更明确的错误提示
+      alert('无法开始录音。请确保您已授权麦克风权限，并且网站是通过 HTTPS 访问的。');
     }
   };
 
