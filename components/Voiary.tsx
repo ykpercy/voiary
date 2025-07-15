@@ -4,8 +4,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Mic, MicOff, Play, Pause, Search, Shuffle, Clock, Calendar } from 'lucide-react';
-// 步骤 1: 引入 idb 库。请先通过 npm/yarn 安装它。
-// npm install idb
 import { openDB, DBSchema } from 'idb';
 
 // 步骤 2: 定义数据库的结构（Schema），这有助于 TypeScript 类型检查
@@ -18,7 +16,7 @@ interface DiaryDB extends DBSchema {
 
 // 步骤 3: 在组件外部，初始化数据库连接。
 // 这会返回一个 Promise，我们可以在组件内部 await 它。
-const dbPromise = openDB<DiaryDB>('voice-diary-database', 1, {
+const dbPromise = openDB<DiaryDB>('voiary-database', 1, {
   upgrade(db) {
     // 当数据库首次创建或版本升级时，这个函数会被调用
     db.createObjectStore('diary-entries', {
@@ -28,25 +26,28 @@ const dbPromise = openDB<DiaryDB>('voice-diary-database', 1, {
 });
 
 
-// 定义日记条目的接口
+// Step 1: Define an interface for the diary entry object
 interface DiaryEntry {
   id: number;
   date: string;
   time: string;
   duration: number;
   audioBlob?: Blob; // 在数据库中我们存储 Blob
-  audioUrl?: string | null; // 在组件 state 中我们使用临时 URL 来播放
+  audioUrl: string | null;
   transcript: string;
   timestamp: number;
 }
 
 const VoiceDiary = () => {
+  // Step 2: Use the interface to type the state. This fixes the error.
   const [diaryEntries, setDiaryEntries] = useState<DiaryEntry[]>([]);
+
   const [isRecording, setIsRecording] = useState(false);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  // 新增一个 state 来存储浏览器支持的 MIME 类型
   const [supportedMimeType, setSupportedMimeType] = useState('');
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -54,11 +55,53 @@ const VoiceDiary = () => {
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioRefs = useRef<Record<number, HTMLAudioElement | null>>({});
 
-  // 效果 1: 检测浏览器支持的录音格式
+  // Mock initial diary data
   useEffect(() => {
-    const mimeTypes = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'];
+    // 按优先级排列，mp4 优先用于 iOS
+    const mimeTypes = [
+      'audio/mp4',
+      'audio/webm;codecs=opus',
+      'audio/webm',
+    ];
     const foundSupportedMimeType = mimeTypes.find(type => MediaRecorder.isTypeSupported(type));
-    setSupportedMimeType(foundSupportedMimeType || '');
+
+    if (foundSupportedMimeType) {
+      setSupportedMimeType(foundSupportedMimeType);
+    } else {
+      console.error('浏览器不支持任何可用的录音格式');
+      // 在这里可以向用户显示错误提示
+    }
+
+    const mockEntries: DiaryEntry[] = [
+      {
+        id: 1,
+        date: '2024-07-10',
+        time: '23:30',
+        duration: 120,
+        audioUrl: null,
+        transcript: '今天工作很充实，完成了一个重要的项目。晚上和朋友聊天很开心。',
+        timestamp: new Date('2024-07-10 23:30').getTime()
+      },
+      {
+        id: 2,
+        date: '2024-07-09',
+        time: '22:45',
+        duration: 95,
+        audioUrl: null,
+        transcript: '今天天气很好，下午去公园散步了。看到很多人在锻炼，感觉很有活力。',
+        timestamp: new Date('2024-07-09 22:45').getTime()
+      },
+      {
+        id: 3,
+        date: '2024-07-08',
+        time: '23:15',
+        duration: 180,
+        audioUrl: null,
+        transcript: '周末在家里整理房间，发现了很多有趣的老照片。回忆满满。',
+        timestamp: new Date('2024-07-08 23:15').getTime()
+      }
+    ];
+    setDiaryEntries(mockEntries);
   }, []);
 
   // 步骤 4: 组件首次加载时，从 IndexedDB 读取历史数据
@@ -91,40 +134,48 @@ const VoiceDiary = () => {
     };
   }, [diaryEntries]);
 
-
+  // Start recording
   const startRecording = async () => {
-    // ... (startRecording 的逻辑与之前的版本保持一致)
+    // ... (rest of your code remains the same)
     if (!supportedMimeType) {
       alert('抱歉，您的浏览器不支持录音功能。');
       return;
     }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // mediaRecorderRef.current = new MediaRecorder(stream);
+      // 使用检测到的 MIME 类型初始化 MediaRecorder
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: supportedMimeType });
       audioChunksRef.current = [];
       
       mediaRecorderRef.current.ondataavailable = (event) => {
+        // audioChunksRef.current.push(event.data);
+        // 重要：检查数据块是否为空，防止录制出静音文件
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
       
-      // 步骤 6: 修改 onstop 回调，将录音保存到 IndexedDB
+      // mediaRecorderRef.current.onstop = () => {
       mediaRecorderRef.current.onstop = async () => { // 注意这里是 async 函数
+        // const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        // 使用与录制时相同的 MIME 类型创建 Blob
         const audioBlob = new Blob(audioChunksRef.current, { type: supportedMimeType });
+        const audioUrl = URL.createObjectURL(audioBlob);
         const newId = Date.now();
-
-        // 准备要存入数据库的对象
+        
         const newEntry: DiaryEntry = {
           id: newId,
           date: new Date().toISOString().split('T')[0],
           time: new Date().toTimeString().slice(0, 5),
           duration: recordingTime,
           audioBlob: audioBlob, // 直接保存 Blob 对象
-          transcript: '正在转录中...', // 初始转录文本
-          timestamp: newId,
+          audioUrl: audioUrl,
+          transcript: '正在转录中...',
+          timestamp: Date.now()
         };
-        
+
         // 存入 IndexedDB
         const db = await dbPromise;
         await db.put('diary-entries', newEntry);
@@ -134,10 +185,20 @@ const VoiceDiary = () => {
           ...newEntry,
           audioUrl: URL.createObjectURL(newEntry.audioBlob!),
         };
-
+        
+        // setDiaryEntries(prev => [newEntry, ...prev]);
         // 更新组件状态，新日记会显示在列表顶部
         setDiaryEntries(prev => [entryForState, ...prev]);
         
+        // Simulate speech-to-text
+        // setTimeout(() => {
+        //   setDiaryEntries(prev => prev.map(entry => 
+        //     entry.id === newEntry.id 
+        //       ? { ...entry, transcript: '这是刚刚录制的语音日记内容。' }
+        //       : entry
+        //   ));
+        // }, 2000);
+
         // 模拟语音转文字（在真实应用中，这部分也应更新到数据库）
         setTimeout(async () => {
           const updatedTranscript = '这是刚刚录制的语音日记内容。';
@@ -161,13 +222,14 @@ const VoiceDiary = () => {
       }, 1000);
       
     } catch (error) {
-      console.error('录音失败:', error);
-      alert('无法开始录音。请确保您已授权麦克风权限。');
+      console.error('Recording failed:', error);
+      // 向用户提供更明确的错误提示
+      alert('无法开始录音。请确保您已授权麦克风权限，并且网站是通过 HTTPS 访问的。');
     }
   };
 
+  // Stop recording
   const stopRecording = () => {
-    // ... (stopRecording 的逻辑保持不变)
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
@@ -177,13 +239,14 @@ const VoiceDiary = () => {
     }
   };
 
-  // ... (togglePlayback, randomPlay, formatTime, formatDate 等辅助函数保持不变)
+  // Toggle audio playback
   const togglePlayback = (entryId: number) => {
     const audio = audioRefs.current[entryId];
     if (!audio) return;
     
     const isCurrentlyPlaying = currentlyPlaying === entryId;
 
+    // Pause all other audio
     Object.values(audioRefs.current).forEach(a => {
         if (a && a !== audio) {
             a.pause();
@@ -194,12 +257,15 @@ const VoiceDiary = () => {
       audio.pause();
       setCurrentlyPlaying(null);
     } else {
-      audio.currentTime = 0;
+      audio.currentTime = 0; // Start from the beginning
       audio.play();
       setCurrentlyPlaying(entryId);
     }
   };
   
+  // ... The rest of your component logic ...
+  // (No other changes are needed for this specific error)
+    // 随机播放
   const randomPlay = () => {
     const playableEntries = diaryEntries.filter(entry => entry.audioUrl);
     if (playableEntries.length === 0) return;
@@ -208,12 +274,14 @@ const VoiceDiary = () => {
     togglePlayback(randomEntry.id);
   };
 
+  // 格式化时间
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // 格式化日期
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     const today = new Date();
@@ -229,11 +297,13 @@ const VoiceDiary = () => {
     }
   };
 
+  // 过滤日记条目
   const filteredEntries = diaryEntries.filter(entry => 
     entry.transcript.toLowerCase().includes(searchQuery.toLowerCase()) ||
     entry.date.includes(searchQuery)
   );
   
+  // Attach event listeners for when audio ends
   useEffect(() => {
     const handleEnded = (id: number) => {
       if (currentlyPlaying === id) {
@@ -246,15 +316,14 @@ const VoiceDiary = () => {
         const onEndedCallback = () => handleEnded(Number(id));
         audio.addEventListener('ended', onEndedCallback);
         
-        return () => {
+        return () => { // Cleanup function
           audio.removeEventListener('ended', onEndedCallback);
         };
       }
     });
   }, [currentlyPlaying]);
 
-  
-  // 组件的 JSX 渲染部分保持不变
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50">
       {/* Header */}
@@ -375,7 +444,7 @@ const VoiceDiary = () => {
                   <div className="flex-1 h-1 bg-orange-100 rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-orange-400 rounded-full"
-                      style={{ width: '0%' }}
+                      style={{ width: '0%' }} // Note: A simple progress bar is complex with just CSS. This is a visual placeholder.
                     />
                   </div>
                 </div>
@@ -390,7 +459,7 @@ const VoiceDiary = () => {
           </div>
         )}
 
-        {diaryEntries.length === 0 && !isRecording && (
+        {diaryEntries.length === 0 && (
           <div className="text-center py-12">
             <p className="text-orange-500">还没有日记记录，开始你的第一条语音日记吧！</p>
           </div>
