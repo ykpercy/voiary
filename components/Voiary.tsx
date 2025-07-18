@@ -385,7 +385,7 @@ const VoiceDiary = ({ session }: { session: Session | null }) => {
             <p className="text-orange-700 mt-6 text-lg">
               {/* {isRecording ? '正在录制...' : '点击开始录制今天的日记'} */}
               {/* 根据登录状态显示不同提示 */}
-              {user ? (isRecording ? '正在录制...' : '点击开始录制今天的日记') : '请先登录，开始记录您的生活'}
+              {user && (isRecording ? '正在录制...' : '点击开始录制今天的日记')}
             </p>
           </div>
 
