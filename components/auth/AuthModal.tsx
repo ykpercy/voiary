@@ -1,39 +1,5 @@
-// 'use client';
-
-// import { useState } from 'react';
-// import React, { useState, useEffect } from 'react';
-// import { LoginForm } from './LoginForm';
-// import { SignUpForm } from './SignUpForm'; // 确保你的 SignUpForm 也接受 onSuccess
-// import './AuthModal.css'; // 我们将为模态框添加一些样式
-
-// export function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-//   const [isLoginView, setIsLoginView] = useState(true);
-
-//   if (!isOpen) {
-//     return null;
-//   }
-
-//   return (
-//     <div className="modal-overlay" onClick={onClose}>
-//       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-//         <button className="modal-close" onClick={onClose}>×</button>
-        
-//         <div className="modal-tabs">
-//           <button onClick={() => setIsLoginView(true)} className={isLoginView ? 'active' : ''}>登录</button>
-//           <button onClick={() => setIsLoginView(false)} className={!isLoginView ? 'active' : ''}>注册</button>
-//         </div>
-
-//         {isLoginView ? (
-//           <LoginForm onSuccess={onClose} />
-//         ) : (
-//           <SignUpForm onSuccess={onClose} />
-//         )}
-//       </div>
-//     </div>
-//   );
-// }
-
 'use client';
+
 
 import React, { useState, useEffect } from 'react';
 import { useActionState } from 'react';
@@ -127,25 +93,25 @@ function AuthForm() {
         </div>
       </form>
 
-      <div className="relative my-6">
+      {/* <div className="relative my-6">
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-gray-300" />
         </div>
         <div className="relative flex justify-center text-sm">
           <span className="bg-white px-2 text-gray-500">或者</span>
         </div>
-      </div>
+      </div> */}
 
-      <div>
+      {/* <div>
         <button
           type="button"
           className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors duration-300"
-          // onClick={() => { /* 在此实现 Google 登录的 action */ }}
+          onClick={() => {  }}
         >
           <GoogleIcon />
           <span className="text-sm font-medium text-gray-700">使用 Google 账户登录</span>
         </button>
-      </div>
+      </div> */}
       
       <p className="mt-8 text-center text-sm text-gray-600">
         {isLoginView ? '还没有账户？' : '已经有账户了？'}
