@@ -3,8 +3,8 @@ import { cookies } from 'next/headers'
 
 // 这是一个在服务器端（Server Components, Route Handlers, Server Actions）
 // 创建 Supabase 客户端的函数。
-export const createClient = () => {
-  const cookieStore = cookies()
+export const createClient = async() => {
+  const cookieStore = await cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

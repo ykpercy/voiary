@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 
 // GET 请求：获取当前登录用户的日记列表
 export async function GET() {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // 1. 获取当前用户会话
   // const { data: { session } } = await supabase.auth.getSession();
@@ -45,7 +45,7 @@ export async function GET() {
 
 // POST 请求：为当前登录用户创建一个新的日记
 export async function POST(request: NextRequest) {
-  const supabase = createClient();
+  const supabase = await createClient();
   
   // 1. 同样，先检查用户会话
   // const { data: { session } } = await supabase.auth.getSession();

@@ -4,7 +4,7 @@ import type { Session } from '@supabase/supabase-js';
 
 // 这是一个服务器组件，它只在服务器上运行
 export default async function HomePage() {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // 在服务器端获取初始的会话信息
   const { data: { session } } = await supabase.auth.getSession();

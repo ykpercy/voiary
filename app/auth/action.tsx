@@ -22,7 +22,7 @@ export type AuthState = {
 
 // --- 注册操作 ---
 export async function signUpAction(prevState: AuthState, formData: FormData): Promise<AuthState> {
-  const supabase = createClient(); // 使用更简洁的方式
+  const supabase = await createClient(); // 使用更简洁的方式
   const validatedFields = SignUpSchema.safeParse(Object.fromEntries(formData.entries()));
 
   if (!validatedFields.success) {
@@ -49,7 +49,7 @@ export async function signUpAction(prevState: AuthState, formData: FormData): Pr
 
 // --- 登录操作 ---
 export async function signInAction(prevState: AuthState, formData: FormData): Promise<AuthState> {
-  const supabase = createClient(); // 使用更简洁的方式
+  const supabase = await createClient(); // 使用更简洁的方式
   const validatedFields = SignInSchema.safeParse(Object.fromEntries(formData.entries()));
 
   if (!validatedFields.success) {
@@ -69,7 +69,7 @@ export async function signInAction(prevState: AuthState, formData: FormData): Pr
 
 // --- 登出操作 ---
 export async function signOutAction() {
-    const supabase = createClient(); // 使用更简洁的方式
+    const supabase = await createClient(); // 使用更简洁的方式
     await supabase.auth.signOut();
     redirect('/'); // 登出后也重定向到首页
 }

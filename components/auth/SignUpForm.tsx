@@ -24,29 +24,7 @@ function SubmitButton() {
   );
 }
 
-// export function SignUpForm() {
-//   const [state, formAction] = useFormState(signUpAction, initialState);
 
-//   return (
-//     <form action={formAction}>
-//       <h2>创建账户</h2>
-//       {state.message && (
-//         <p style={{ color: state.success ? 'green' : 'red' }}>
-//           {state.message}
-//         </p>
-//       )}
-//       <div>
-//         <label htmlFor="email">邮箱</label>
-//         <input type="email" id="email" name="email" required />
-//       </div>
-//       <div>
-//         <label htmlFor="password">密码</label>
-//         <input type="password" id="password" name="password" required />
-//       </div>
-//       <SubmitButton />
-//     </form>
-//   );
-// }
 
 // 3. 让组件接收 props，并解构出 onSuccess
 export function SignUpForm({ onSuccess }: SignUpFormProps) {
@@ -60,7 +38,7 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
       // 调用从父组件传入的 onSuccess 函数
       onSuccess();
     }
-  }, [state, onSuccess]); // 依赖项数组确保 effect 只在 state 或 onSuccess 变化时运行
+  }, [state.success, onSuccess]); // 依赖项数组确保 effect 只在 state 或 onSuccess 变化时运行
 
   return (
     <form action={formAction}>
