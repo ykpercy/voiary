@@ -356,37 +356,39 @@ const VoiceDiary = ({ session }: { session: Session | null }) => {
           )}
 
           {/* Recording UI */}
-          <div className="mb-8 text-center">
-            <div className="relative">
-              <button
-                onClick={handleRecordClick} // 使用新的点击处理器
-                className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 ${
-                  isRecording 
-                    ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
-                    : 'bg-orange-500 hover:bg-orange-600 shadow-lg hover:shadow-xl'
-                }`}
-              >
-                {isRecording ? (
-                  <MicOff className="h-8 w-8 text-white" />
-                ) : (
-                  <Mic className="h-8 w-8 text-white" />
-                )}
-              </button>
-              
-              {isRecording && (
-                <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2">
-                  <div className="bg-red-500 text-white px-3 py-1 rounded-full text-sm">
-                    {formatTime(recordingTime)}
+          <div className="flex flex-col items-center justify-center my-16">
+            <div className="mb-8">
+              <div className="relative">
+                <button
+                  onClick={handleRecordClick} // 使用新的点击处理器
+                  className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 ${
+                    isRecording 
+                      ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
+                      : 'bg-orange-500 hover:bg-orange-600 shadow-lg hover:shadow-xl'
+                  }`}
+                >
+                  {isRecording ? (
+                    <MicOff className="h-8 w-8 text-white" />
+                  ) : (
+                    <Mic className="h-8 w-8 text-white" />
+                  )}
+                </button>
+                
+                {isRecording && (
+                  <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2">
+                    <div className="bg-red-500 text-white px-3 py-1 rounded-full text-sm">
+                      {formatTime(recordingTime)}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+              
+              <p className="text-orange-700 mt-6 text-lg">
+                {/* {isRecording ? '正在录制...' : '点击开始录制今天的日记'} */}
+                {/* 根据登录状态显示不同提示 */}
+                {user && (isRecording ? '正在录制...' : '点击开始录制今天的日记')}
+              </p>
             </div>
-            
-            <p className="text-orange-700 mt-6 text-lg">
-              {/* {isRecording ? '正在录制...' : '点击开始录制今天的日记'} */}
-              {/* 根据登录状态显示不同提示 */}
-              {user && (isRecording ? '正在录制...' : '点击开始录制今天的日记')}
-            </p>
           </div>
 
           {/* Diary List: 只有登录后才显示 */}
