@@ -48,9 +48,13 @@ export async function POST(request: NextRequest) {
   const supabase = createClient();
   
   // 1. 同样，先检查用户会话
-  const { data: { session } } = await supabase.auth.getSession();
+  // const { data: { session } } = await supabase.auth.getSession();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session) {
+  // if (!session) {
+  //   return new NextResponse(JSON.stringify({ error: '未经授权' }), { status: 401 });
+  // }
+  if (!user) { // 检查 user 对象是否存在
     return new NextResponse(JSON.stringify({ error: '未经授权' }), { status: 401 });
   }
 
@@ -63,13 +67,15 @@ export async function POST(request: NextRequest) {
   }
 
   // 2. 上传文件到 Storage，最好以用户ID作为路径前缀
-  const fileName = `${session.user.id}/${Date.now()}.webm`;
+  const fileName = `${user.id}/${Date.now()}.webm`;
   const { error: uploadError } = await supabase.storage
     .from('audio-uploads')
     .upload(fileName, audioBlob);
 
   if (uploadError) {
-    throw new Error(`Storage Error: ${uploadError.message}`);
+    // throw new Error(`Storage Error: ${uploadError.message}`);
+    // 为了更好的错误处理，建议返回 JSON 格式的错误
+    return NextResponse.json({ error: `Storage Error: ${uploadError.message}` }, { status: 500 });
   }
   
   // 3. 获取文件的公开 URL

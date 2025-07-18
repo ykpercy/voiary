@@ -1,4 +1,6 @@
 // 文件路径: /app/auth/sign-up/page.tsx
+'use client';
+
 import { useRouter } from 'next/navigation';
 import { SignUpForm } from '@/components/auth/SignUpForm';
 

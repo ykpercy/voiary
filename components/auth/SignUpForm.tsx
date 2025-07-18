@@ -2,7 +2,8 @@
 'use client'; // <-- 关键指令，声明这是客户端组件
 
 import { useEffect } from 'react'; // 1. 导入 useEffect Hook
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useActionState } from 'react';
 import { signUpAction, AuthState } from '@/app/auth/action';
 
 interface SignUpFormProps {
@@ -49,7 +50,7 @@ function SubmitButton() {
 
 // 3. 让组件接收 props，并解构出 onSuccess
 export function SignUpForm({ onSuccess }: SignUpFormProps) {
-  const [state, formAction] = useFormState(signUpAction, initialState);
+  const [state, formAction] = useActionState(signUpAction, initialState);
 
   // 4. 使用 useEffect 来监听 state 的变化
   // 这是在客户端组件中对 Server Action 的结果做出反应的最佳方式

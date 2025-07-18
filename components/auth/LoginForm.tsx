@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useActionState } from 'react';
 import { signInAction, AuthState } from '@/app/auth/action';
 
 const initialState: AuthState = { message: '', success: false };
@@ -11,7 +12,7 @@ function SubmitButton() {
 }
 
 export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
-  const [state, formAction] = useFormState(signInAction, initialState);
+  const [state, formAction] = useActionState(signInAction, initialState);
 
   if (state.success) {
     // 成功登录后调用回调函数 (例如关闭模态框)

@@ -2,8 +2,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient'; // 确保路径正确
+// import { supabase } from '@/lib/supabaseClient'; // 确保路径正确
+import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
+
+const supabase = createClient();
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
