@@ -34,8 +34,21 @@ export async function signUpAction(prevState: AuthState, formData: FormData): Pr
   }
   
   const { email, password } = validatedFields.data;
-  const { error } = await supabase.auth.signUp({ email, password });
+  // 1. (可选但强烈推荐) 添加 emailRedirectTo 选项
+  // 这会告诉 Supabase，在用户点击确认邮件中的链接后，应该将他们重定向到哪个页面。
+  // 通常，我们会创建一个回调页面来处理会话，然后最终将用户带到他们的主页。
+  const origin = process.env.NEXT_PUBLIC_BASE_URL;
 
+  const { error } = await supabase.auth.signUp({ 
+    email, 
+    password,
+    options: {
+      emailRedirectTo: `${origin}/auth/callback`,
+    }, 
+  });
+
+  // 2. 处理 Supabase 可能返回的错误
+  // 例如：用户已存在 (User already registered)
   if (error) {
     return { message: `注册失败: ${error.message}`, success: false };
   }
