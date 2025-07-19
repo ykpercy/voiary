@@ -307,7 +307,7 @@ const VoiceDiary = ({ session }: { session: Session | null }) => {
           <div className="max-w-md mx-auto">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-orange-800">语音日记</h1>
+                <h1 className="text-2xl font-bold text-orange-800">Voiary语音日记</h1>
                 <p className="text-orange-600 text-sm mt-1">记录每一天的美好时光</p>
               </div>
               <div className="flex items-center gap-2">
