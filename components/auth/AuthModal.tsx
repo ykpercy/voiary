@@ -50,7 +50,7 @@ function SuccessNotification({ message }: { message: string }) {
         </div>
         <div className="ml-3">
           <p className="text-sm font-medium text-green-800">{message}</p>
-          <p className="text-sm text-green-700 mt-1">请检查您的收件箱并点击验证链接以激活账户。</p>
+          {/* <p className="text-sm text-green-700 mt-1">请检查您的收件箱并点击验证链接以激活账户。</p> */}
         </div>
       </div>
     </div>
