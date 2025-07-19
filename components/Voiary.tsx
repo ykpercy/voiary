@@ -308,7 +308,7 @@ const VoiceDiary = ({ session }: { session: Session | null }) => {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-orange-800">Voiary</h1>
-                <p className="text-orange-600 text-sm mt-1">语音日记</p>
+                {/* <p className="text-orange-600 text-sm mt-1">语音日记</p> */}
               </div>
               <div className="flex items-center gap-2">
                 {/* 根据登录状态显示不同内容 */}
