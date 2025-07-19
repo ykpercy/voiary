@@ -356,7 +356,7 @@ const VoiceDiary = ({ session }: { session: Session | null }) => {
           )}
 
           {/* Recording UI */}
-          <div className="flex flex-col items-center justify-center my-16">
+          <div className="flex flex-col items-center justify-center my-16 mb-8">
             <div className="mb-8">
               <div className="relative">
                 <button
@@ -383,13 +383,25 @@ const VoiceDiary = ({ session }: { session: Session | null }) => {
                 )}
               </div>
               
-              <p className="text-orange-700 mt-6 text-lg">
+              <p className="text-orange-700 mt-6 text-lg text-center">
                 {/* {isRecording ? '正在录制...' : '点击开始录制今天的日记'} */}
                 {/* 根据登录状态显示不同提示 */}
                 {user && (isRecording ? '正在录制...' : '点击开始录制今天的日记')}
               </p>
             </div>
           </div>
+
+          {/* 未登录时的欢迎提示 */}
+          {!user && !isLoading && (
+            // 修改点 3: 调整了内边距并移除了背景色，使其与页面更融合
+            <div className="text-center py-8">
+              <h2 className="text-xl font-semibold text-orange-800">欢迎来到Voiary语音日记</h2>
+              <p className="text-orange-600 mt-2">登录后即可开始记录您的生活点滴。</p>
+              <button onClick={() => setIsAuthModalOpen(true)} className="mt-6 px-6 py-3 text-white font-semibold bg-orange-500 rounded-full shadow-lg hover:bg-orange-600 transition-transform hover:scale-105">
+                立即开始
+              </button>
+            </div>
+          )}
 
           {/* Diary List: 只有登录后才显示 */}
           {user && (
@@ -454,16 +466,16 @@ const VoiceDiary = ({ session }: { session: Session | null }) => {
             </div>
           )}
 
-          {/* 未登录时的欢迎提示 */}
+          {/* 未登录时的欢迎提示
           {!user && !isLoading && (
               <div className="text-center py-20 bg-white/50 rounded-2xl">
-                <h2 className="text-xl font-semibold text-orange-800">欢迎来到语音日记</h2>
+                <h2 className="text-xl font-semibold text-orange-800">欢迎来到Voiary语音日记</h2>
                 <p className="text-orange-600 mt-2">登录后即可开始记录您的生活点滴。</p>
                 <button onClick={() => setIsAuthModalOpen(true)} className="mt-6 px-6 py-3 text-white font-semibold bg-orange-500 rounded-full shadow-lg hover:bg-orange-600 transition-transform hover:scale-105">
                   立即开始
                 </button>
               </div>
-          )}
+          )} */}
 
           {/* {filteredEntries.length === 0 && searchQuery && (
             <div className="text-center py-12">
