@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     .insert({
       duration: parseInt(duration, 10),
       audio_url: publicUrlData.publicUrl,
-      transcript: '这是新录制的日记，转录进行中...',
+      transcript: '这是新录制的日记',
     })
     .select()
     .single();

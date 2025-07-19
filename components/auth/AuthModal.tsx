@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { signInAction, signUpAction, type AuthState } from '@/app/auth/action';
-import { X } from 'lucide-react'; // 导入关闭图标
+import { X, CheckCircle2 } from 'lucide-react'; // 导入关闭图标
 
 // 初始状态
 const initialAuthState: AuthState = { message: '', success: false };
@@ -40,6 +40,23 @@ function SubmitButton({ isLoginView, disabled }: { isLoginView: boolean, disable
   );
 }
 
+// 新增：注册成功后的提示组件
+function SuccessNotification({ message }: { message: string }) {
+  return (
+    <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded-md shadow-sm">
+      <div className="flex items-center">
+        <div className="flex-shrink-0">
+          <CheckCircle2 className="h-6 w-6 text-green-500" />
+        </div>
+        <div className="ml-3">
+          <p className="text-sm font-medium text-green-800">{message}</p>
+          <p className="text-sm text-green-700 mt-1">请检查您的收件箱并点击验证链接以激活账户。</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // 新的认证表单
 function AuthForm() {
   const [isLoginView, setIsLoginView] = useState(true);
@@ -60,38 +77,42 @@ function AuthForm() {
         </p>
       </div>
 
-      <form action={isLoginView ? signInFormAction : signUpFormAction} className="space-y-4">
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">邮箱地址</label>
-          <input
-            id="email" name="email" type="email" required
-            className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow"
-          />
-        </div>
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700">密码</label>
-          <input
-            id="password" name="password" type="password" required
-            className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow"
-          />
-        </div>
+      {signUpState.success ? (
+        <SuccessNotification message={signUpState.message} />
+      ) : (
+        <form action={isLoginView ? signInFormAction : signUpFormAction} className="space-y-4">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">邮箱地址</label>
+            <input
+              id="email" name="email" type="email" required
+              className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow"
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">密码</label>
+            <input
+              id="password" name="password" type="password" required
+              className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow"
+            />
+          </div>
 
-        {state.message && (
-          // <p className="text-sm text-red-600 text-center">{state.message}</p>
-          <p className={`text-sm text-center ${state.success ? 'text-green-600' : 'text-red-600'}`}>
-            {state.message}
-          </p>
-        )}
-        {signUpState.message && signUpState.success && (
-            <p className="text-sm text-green-600 text-center">{signUpState.message}</p>
-        )}
-        
-        <div className="pt-2">
-          {/* <SubmitButton isLoginView={isLoginView} /> */}
-          {/* 当注册成功后，可以考虑禁用提交按钮 */}
-          <SubmitButton isLoginView={isLoginView} disabled={signUpState.success} />
-        </div>
-      </form>
+          {state.message && !state.success && (
+            <p className="text-sm text-red-600 text-center">{state.message}</p>
+            // <p className={`text-sm text-center ${state.success ? 'text-green-600' : 'text-red-600'}`}>
+            //   {state.message}
+            // </p>
+          )}
+          {/* {signUpState.message && signUpState.success && (
+              <p className="text-sm text-green-600 text-center">{signUpState.message}</p>
+          )} */}
+          
+          <div className="pt-2">
+            <SubmitButton isLoginView={isLoginView} />
+            {/* 当注册成功后，可以考虑禁用提交按钮 */}
+            {/* <SubmitButton isLoginView={isLoginView} disabled={signUpState.success} /> */}
+          </div>
+        </form>
+      )}
 
       {/* <div className="relative my-6">
         <div className="absolute inset-0 flex items-center">
@@ -117,7 +138,13 @@ function AuthForm() {
         {isLoginView ? '还没有账户？' : '已经有账户了？'}
         <button
           type="button"
-          onClick={() => setIsLoginView(!isLoginView)}
+          onClick={() => {
+            setIsLoginView(!isLoginView);
+            // 在切换视图时重置状态，避免旧消息残留
+            signInState.message = '';
+            signUpState.message = '';
+            signUpState.success = false;
+          }}
           className="font-semibold text-orange-600 hover:text-orange-500 ml-1 focus:outline-none focus:underline"
         >
           {isLoginView ? '立即注册' : '直接登录'}

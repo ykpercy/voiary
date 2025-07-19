@@ -55,7 +55,7 @@ export async function signUpAction(prevState: AuthState, formData: FormData): Pr
 
   // 注册请求成功后，提示用户检查邮箱
   return {
-    message: '注册请求成功！请检查您的邮箱以完成验证。',
+    message: '注册成功！请检查您的邮箱以完成验证。',
     success: true,
   };
 }
