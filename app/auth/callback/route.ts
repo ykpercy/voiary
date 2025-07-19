@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   const code = searchParams.get('code');
   
   // 如果 URL 中有 'next' 参数，我们可以用它来决定最终重定向到哪里
-  const next = searchParams.get('next') ?? '/';
+  // const next = searchParams.get('next') ?? '/';
 
   if (code) {
     const supabase = await createClient();
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     
     if (!error) {
       // 如果交换成功，重定向到用户原来的目标页面或主页
-      return NextResponse.redirect(`${origin}${next}`);
+      return NextResponse.redirect(`${origin}/auth/confirm`);
     }
   }
 
