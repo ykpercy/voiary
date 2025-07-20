@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     .getPublicUrl(fileName);
   
   // 从 user 对象中获取昵称，并提供一个后备值
-  const userDisplayName = user.user_metadata?.display_name ?? '匿名用户';
+  const userDisplayName = user.user_metadata?.user_display_name ?? 'vivi';
 
   // 准备要插入数据库的完整数据对象
   const newDiaryData = {
