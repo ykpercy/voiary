@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const audioBlob = formData.get('audio') as Blob | null;
   const duration = formData.get('duration') as string | null;
+  const is_public = formData.get('is_public') === 'true';
 
   if (!audioBlob || !duration) {
     return NextResponse.json({ error: '缺少音频文件或时长信息' }, { status: 400 });
@@ -90,6 +91,7 @@ export async function POST(request: NextRequest) {
       duration: parseInt(duration, 10),
       audio_url: publicUrlData.publicUrl,
       transcript: '这是新录制的日记',
+      is_public: is_public,
     })
     .select()
     .single();

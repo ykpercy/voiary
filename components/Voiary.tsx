@@ -24,6 +24,10 @@ const VoiceDiary = ({ session }: { session: Session | null }) => {
   // Step 2: Use the interface to type the state. This fixes the error.
   const user = session?.user;
   const [diaryEntries, setDiaryEntries] = useState<DiaryEntry[]>([]);
+  // 新增: State 用于存储公开日记
+  const [publicEntries, setPublicEntries] = useState<DiaryEntry[]>([]);
+  // 新增: State 用于控制当前录音是否公开
+  const [isPublicRecording, setIsPublicRecording] = useState(true); // 默认公开
   const [isLoading, setIsLoading] = useState(true); // 新增 loading 状态
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false); // 用于控制认证模态框的显示
 
@@ -41,6 +45,7 @@ const VoiceDiary = ({ session }: { session: Session | null }) => {
   const audioRefs = useRef<Record<number, HTMLAudioElement | null>>({});
 
   // Mock initial diary data
+  // 获取个人日记 (依赖用户)
   useEffect(() => {
     // 按优先级排列，mp4 优先用于 iOS
     const mimeTypes = [
@@ -82,25 +87,26 @@ const VoiceDiary = ({ session }: { session: Session | null }) => {
       setIsLoading(false);
     }
     
-    // 从后端 API 获取数据
-    // async function fetchEntries() {
-    //   setIsLoading(true);
-    //   try {
-    //     const response = await fetch('/api/diaries'); // 直接使用相对路径
-    //     if (!response.ok) {
-    //       throw new Error('网络响应失败');
-    //     }
-    //     const entriesFromApi: DiaryEntry[] = await response.json();
-    //     setDiaryEntries(entriesFromApi);
-    //   } catch (error) {
-    //     console.error("无法从服务器获取日记:", error);
-    //   } finally {
-    //     setIsLoading(false);
-    //   }
-    // }
 
-    // fetchEntries();
   }, [user]); // 依赖数组中加入 user，当用户登录或登出时，此 effect 会重新运行
+
+  // 新增: useEffect 用于获取公开日记
+  useEffect(() => {
+    async function fetchPublicEntries() {
+      try {
+        const response = await fetch('/api/public-diaries');
+        if (!response.ok) {
+          throw new Error('网络响应失败');
+        }
+        const entries: DiaryEntry[] = await response.json();
+        setPublicEntries(entries);
+      } catch (error) {
+        console.error("无法获取公开日记:", error);
+      }
+    }
+
+    fetchPublicEntries();
+  }, []); // 空依赖数组，表示只在组件挂载时运行一次
 
   // 点击录音按钮的逻辑
   const handleRecordClick = () => {
@@ -158,16 +164,7 @@ const VoiceDiary = ({ session }: { session: Session | null }) => {
     }
   };
 
-  // Stop recording
-  // const stopRecording = () => {
-  //   if (mediaRecorderRef.current && isRecording) {
-  //     mediaRecorderRef.current.stop();
-  //     setIsRecording(false);
-  //     if (recordingIntervalRef.current) {
-  //       clearInterval(recordingIntervalRef.current);
-  //     }
-  //   }
-  // };
+
   // 改造 2: 停止录音时，将文件上传到服务器
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
@@ -178,6 +175,8 @@ const VoiceDiary = ({ session }: { session: Session | null }) => {
         // 'audio' 必须和后端 API Route 中 `formData.get('audio')` 的键名一致
         formData.append('audio', audioBlob, 'diary-recording.webm'); 
         formData.append('duration', String(recordingTime));
+        // 新增: 将是否公开的选项添加到表单数据中
+        formData.append('is_public', String(isPublicRecording));
 
         // 停止计时器和录制状态
         if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
@@ -195,6 +194,10 @@ const VoiceDiary = ({ session }: { session: Session | null }) => {
           }
 
           const newEntryFromServer = await response.json();
+          // 根据是否公开，更新对应的列表
+          if (newEntryFromServer.is_public) {
+            setPublicEntries(prev => [newEntryFromServer, ...prev]);
+          }
           // 将服务器返回的新条目添加到列表顶部，实现即时更新
           setDiaryEntries(prev => [newEntryFromServer, ...prev]);
 
@@ -388,6 +391,20 @@ const VoiceDiary = ({ session }: { session: Session | null }) => {
                 {/* 根据登录状态显示不同提示 */}
                 {user && (isRecording ? '正在录制...' : '点击开始录制今天的日记')}
               </p>
+
+              {/* 新增: 只有登录后才能看到公开选项 */}
+              {user && !isRecording && (
+                <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    id="isPublic"
+                    checked={isPublicRecording}
+                    onChange={(e) => setIsPublicRecording(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                  />
+                  <label htmlFor="isPublic">公开分享这篇日记</label>
+                </div>
+              )}
             </div>
           </div>
 
@@ -403,66 +420,135 @@ const VoiceDiary = ({ session }: { session: Session | null }) => {
             </div>
           )}
 
-          {/* Diary List: 只有登录后才显示 */}
-          {user && (
-            <div className="space-y-4">
-              {isLoading && <p className="text-center text-orange-500 animate-pulse">正在加载日记...</p>}
-              {!isLoading && diaryEntries.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-orange-500">还没有日记记录，开始你的第一条语音日记吧！</p>
-                </div>
-              )}
-              {filteredEntries.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 shadow-sm border border-orange-100 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2 text-orange-600">
-                      <Calendar className="h-4 w-4" />
-                      <span className="font-medium">{formatDate(entry.date)}</span>
-                      <Clock className="h-4 w-4 ml-2" />
-                      <span className="text-sm">{entry.time}</span>
-                    </div>
-                    <div className="text-sm text-orange-500">
-                      {formatTime(entry.duration)}
-                    </div>
-                  </div>
-                  
-                  <p className="text-gray-700 mb-3 line-clamp-3">
-                    {entry.transcript}
-                  </p>
-                  
-                  {entry.audioUrl && (
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => togglePlayback(entry.id)}
-                        className="p-2 rounded-full bg-orange-100 hover:bg-orange-200 transition-colors"
-                      >
-                        {currentlyPlaying === entry.id ? (
-                          <Pause className="h-4 w-4 text-orange-600" />
-                        ) : (
-                          <Play className="h-4 w-4 text-orange-600" />
-                        )}
-                      </button>
-                      
-                      <audio
-                        ref={el => {audioRefs.current[entry.id] = el}}
-                        src={entry.audioUrl}
-                        onEnded={() => setCurrentlyPlaying(null)}
-                        className="hidden"
-                      />
-                      
-                      <div className="flex-1 h-1 bg-orange-100 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-orange-400 rounded-full"
-                          style={{ width: '0%' }} // Note: A simple progress bar is complex with just CSS. This is a visual placeholder.
-                        />
+          {/* 新增: 公开广场区域 */}
+          {publicEntries.length > 0 && (
+            <div className="mb-12">
+              <h2 className="text-xl font-bold text-orange-800 mb-4 text-center">公开广场</h2>
+              <div className="space-y-4">
+                {publicEntries.map((entry) => (
+                  // 这里我们复用日记条目的样式，你也可以为它创建专门的组件
+                  <div
+                    key={`public-${entry.id}`}
+                    className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 shadow-sm border border-orange-100"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2 text-orange-600">
+                        {/* 可以显示一个通用的“地球”或“分享”图标代替日期 */}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-globe"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                        <span className="font-medium">一条公开的分享</span>
+                      </div>
+                      <div className="text-sm text-orange-500">
+                        {formatTime(entry.duration)}
                       </div>
                     </div>
-                  )}
+                    
+                    <p className="text-gray-700 mb-3 line-clamp-3">
+                      {entry.transcript}
+                    </p>
+                    
+                    {entry.audioUrl && (
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => togglePlayback(entry.id)}
+                          className="p-2 rounded-full bg-orange-100 hover:bg-orange-200 transition-colors"
+                        >
+                          {currentlyPlaying === entry.id ? <Pause className="h-4 w-4 text-orange-600" /> : <Play className="h-4 w-4 text-orange-600" />}
+                        </button>
+                        
+                        <audio
+                          ref={el => {audioRefs.current[entry.id] = el}}
+                          src={entry.audioUrl}
+                          onEnded={() => setCurrentlyPlaying(null)}
+                          className="hidden"
+                        />
+                        
+                        <div className="flex-1 h-1 bg-orange-100 rounded-full overflow-hidden">
+                           {/* ... (进度条) ... */}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 3. 私人日记列表 */}
+          {/* Diary List: 只有登录后才显示 */}
+          {user && (
+            <div className="mt-12">
+              {/* 如果没有个人日记，显示提示信息 */}
+              {!isLoading && diaryEntries.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-orange-500">还没有私人日记，开始你的第一条记录吧！</p>
                 </div>
-              ))}
+              )}
+              {/* 如果有个人日记，显示列表 */}
+              {/* 新增: 如果有个人日记，添加一个标题 */}
+              {diaryEntries.length > 0 && (
+                <>
+                  <h2 className="text-xl font-bold text-orange-800 mb-4 text-center">我的私人日记</h2>
+                  <div className="space-y-4">
+                    {isLoading && <p className="text-center text-orange-500 animate-pulse">正在加载日记...</p>}
+                    {/* {!isLoading && diaryEntries.length === 0 && (
+                      <div className="text-center py-12">
+                        <p className="text-orange-500">还没有日记记录，开始你的第一条语音日记吧！</p>
+                      </div>
+                    )} */}
+                    {filteredEntries.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 shadow-sm border border-orange-100 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2 text-orange-600">
+                            <Calendar className="h-4 w-4" />
+                            <span className="font-medium">{formatDate(entry.date)}</span>
+                            <Clock className="h-4 w-4 ml-2" />
+                            <span className="text-sm">{entry.time}</span>
+                          </div>
+                          <div className="text-sm text-orange-500">
+                            {formatTime(entry.duration)}
+                          </div>
+                        </div>
+                        
+                        <p className="text-gray-700 mb-3 line-clamp-3">
+                          {entry.transcript}
+                        </p>
+                        
+                        {entry.audioUrl && (
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => togglePlayback(entry.id)}
+                              className="p-2 rounded-full bg-orange-100 hover:bg-orange-200 transition-colors"
+                            >
+                              {currentlyPlaying === entry.id ? (
+                                <Pause className="h-4 w-4 text-orange-600" />
+                              ) : (
+                                <Play className="h-4 w-4 text-orange-600" />
+                              )}
+                            </button>
+                            
+                            <audio
+                              ref={el => {audioRefs.current[entry.id] = el}}
+                              src={entry.audioUrl}
+                              onEnded={() => setCurrentlyPlaying(null)}
+                              className="hidden"
+                            />
+                            
+                            <div className="flex-1 h-1 bg-orange-100 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-orange-400 rounded-full"
+                                style={{ width: '0%' }} // Note: A simple progress bar is complex with just CSS. This is a visual placeholder.
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
 
