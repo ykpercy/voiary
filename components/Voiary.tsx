@@ -412,8 +412,8 @@ const VoiceDiary = ({ session }: { session: Session | null }) => {
           {!user && !isLoading && (
             // 修改点 3: 调整了内边距并移除了背景色，使其与页面更融合
             <div className="text-center py-8">
-              <h2 className="text-xl font-semibold text-orange-800">欢迎来到Voiary语音日记</h2>
-              <p className="text-orange-600 mt-2">登录后即可开始记录您的生活点滴。</p>
+              <h2 className="text-xl font-semibold text-orange-800">欢迎来到Voiary</h2>
+              <p className="text-orange-600 mt-2">现在说点什么呢？</p>
               <button onClick={() => setIsAuthModalOpen(true)} className="mt-6 px-6 py-3 text-white font-semibold bg-orange-500 rounded-full shadow-lg hover:bg-orange-600 transition-transform hover:scale-105">
                 立即开始
               </button>
