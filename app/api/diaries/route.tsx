@@ -38,6 +38,7 @@ export async function GET() {
     audioUrl: entry.audio_url,
     transcript: entry.transcript,
     timestamp: new Date(entry.created_at).getTime(),
+    userDisplayName: entry.user_display_name 
   }));
 
   return NextResponse.json(entries);
@@ -83,21 +84,38 @@ export async function POST(request: NextRequest) {
   const { data: publicUrlData } = supabase.storage
     .from('audio-uploads')
     .getPublicUrl(fileName);
+  
+  // 从 user 对象中获取昵称，并提供一个后备值
+  const userDisplayName = user.user_metadata?.display_name ?? '匿名用户';
+
+  // 准备要插入数据库的完整数据对象
+  const newDiaryData = {
+    user_id: user.id, // 明确提供 user_id 是一个好习惯
+    duration: parseInt(duration, 10),
+    audio_url: publicUrlData.publicUrl,
+    transcript: '语音转文字功能正在开发中...', // 这是一个比之前更好的占位符
+    is_public: is_public,
+    user_display_name: userDisplayName, // 将获取到的昵称添加到这里
+  };
 
   // 4. 将日记元数据插入数据库。RLS 策略会自动将 session.user.id 填入 user_id 字段
   const { data: dbData, error: dbError } = await supabase
     .from('diaries')
-    .insert({
-      duration: parseInt(duration, 10),
-      audio_url: publicUrlData.publicUrl,
-      transcript: '这是新录制的日记',
-      is_public: is_public,
-    })
+    // .insert({
+    //   duration: parseInt(duration, 10),
+    //   audio_url: publicUrlData.publicUrl,
+    //   transcript: '这是新录制的日记',
+    //   is_public: is_public,
+    // })
+    .insert(newDiaryData) // 使用我们准备好的数据对象
     .select()
     .single();
 
   if (dbError) {
-    throw new Error(`Database Error: ${dbError.message}`);
+    // 如果插入失败，最好也从 Storage 中删除刚刚上传的文件，以避免产生孤立文件
+    await supabase.storage.from('audio-uploads').remove([fileName]);
+    // throw new Error(`Database Error: ${dbError.message}`);
+    return NextResponse.json({ error: `Database Error: ${dbError.message}` }, { status: 500 });
   }
   
   // 5. 返回与前端接口一致的数据结构
@@ -109,6 +127,8 @@ export async function POST(request: NextRequest) {
       audioUrl: dbData.audio_url,
       transcript: dbData.transcript,
       timestamp: new Date(dbData.created_at).getTime(),
+      is_public: dbData.is_public, // --> 5. 将 is_public 也返回，方便前端判断
+      userDisplayName: dbData.user_display_name, // (可选)如果需要也可以返回
   };
 
   return NextResponse.json(responseEntry, { status: 201 });

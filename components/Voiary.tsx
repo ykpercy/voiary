@@ -18,6 +18,10 @@ interface DiaryEntry {
   audioUrl: string | null;
   transcript: string;
   timestamp: number;
+  // 我们将它设为可选的（用 ?），因为旧的日记或者私人日记可能没有这个字段
+  user_display_name?: string; 
+  // 您也可以在后端返回 is_public，并在这里添加它，方便前端判断
+  is_public?: boolean;
 }
 
 const VoiceDiary = ({ session }: { session: Session | null }) => {
@@ -423,7 +427,7 @@ const VoiceDiary = ({ session }: { session: Session | null }) => {
           {/* 新增: 公开广场区域 */}
           {publicEntries.length > 0 && (
             <div className="mb-12">
-              <h2 className="text-xl font-bold text-orange-800 mb-4 text-center">公开广场</h2>
+              <h2 className="text-xl font-bold text-orange-800 mb-4 text-center">听见新世界</h2>
               <div className="space-y-4">
                 {publicEntries.map((entry) => (
                   // 这里我们复用日记条目的样式，你也可以为它创建专门的组件
@@ -435,7 +439,7 @@ const VoiceDiary = ({ session }: { session: Session | null }) => {
                       <div className="flex items-center gap-2 text-orange-600">
                         {/* 可以显示一个通用的“地球”或“分享”图标代替日期 */}
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-globe"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
-                        <span className="font-medium">一条公开的分享</span>
+                        <span className="font-medium">{entry.user_display_name ?? 'vivi'}</span>
                       </div>
                       <div className="text-sm text-orange-500">
                         {formatTime(entry.duration)}

@@ -88,6 +88,20 @@ function AuthForm() {
               className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow"
             />
           </div>
+          {/* 只在注册视图中显示昵称输入框 */}
+          {!isLoginView && (
+            <div>
+              <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">昵称</label>
+              <input
+                id="displayName"
+                name="displayName" // 这个 name 属性至关重要，Server Action 将通过它来获取数据
+                type="text"
+                required
+                placeholder="您希望我们如何称呼您？"
+                className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow"
+              />
+            </div>
+          )}
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">密码</label>
             <input
@@ -141,9 +155,15 @@ function AuthForm() {
           onClick={() => {
             setIsLoginView(!isLoginView);
             // 在切换视图时重置状态，避免旧消息残留
-            signInState.message = '';
-            signUpState.message = '';
-            signUpState.success = false;
+            // signInState.message = '';
+            // signUpState.message = '';
+            // signUpState.success = false;
+            // 切换视图时重置状态
+            if (signInState) signInState.message = '';
+            if (signUpState) {
+              signUpState.message = '';
+              signUpState.success = false;
+            }
           }}
           className="font-semibold text-orange-600 hover:text-orange-500 ml-1 focus:outline-none focus:underline"
         >

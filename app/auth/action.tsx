@@ -8,6 +8,7 @@ import { redirect } from 'next/navigation';
 const SignUpSchema = z.object({
   email: z.string().email({ message: '请输入有效的邮箱地址' }),
   password: z.string().min(6, { message: '密码长度不能少于6位' }),
+  displayName: z.string().min(1, { message: '请输入您的昵称' }),
 });
 
 const SignInSchema = z.object({
@@ -28,12 +29,12 @@ export async function signUpAction(prevState: AuthState, formData: FormData): Pr
   if (!validatedFields.success) {
     const errorMessages = validatedFields.error.flatten().fieldErrors;
     return {
-      message: errorMessages.email?.[0] || errorMessages.password?.[0] || '输入无效，请检查。',
+      message: errorMessages.email?.[0] || errorMessages.password?.[0] || errorMessages.displayName?.[0] || '输入无效，请检查。',
       success: false,
     };
   }
   
-  const { email, password } = validatedFields.data;
+  const { email, password, displayName } = validatedFields.data;
   // 1. (可选但强烈推荐) 添加 emailRedirectTo 选项
   // 这会告诉 Supabase，在用户点击确认邮件中的链接后，应该将他们重定向到哪个页面。
   // 通常，我们会创建一个回调页面来处理会话，然后最终将用户带到他们的主页。
@@ -44,6 +45,10 @@ export async function signUpAction(prevState: AuthState, formData: FormData): Pr
     password,
     options: {
       emailRedirectTo: `${origin}/auth/callback`,
+      // 3. 将 displayName 添加到 user_metadata 中
+      data: {
+        display_name: displayName, // Supabase 建议的元数据键名是蛇形命名法 (snake_case)
+      },
     }, 
   });
 

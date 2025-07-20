@@ -16,7 +16,7 @@ export async function GET() {
     // 按创建时间倒序排序，最新的在前面
     const { data: publicDiaries, error } = await supabase
       .from('diaries')
-      .select('id, created_at, duration, audio_url, transcript') // 注意：这里没有选择 user_id
+      .select('id, created_at, duration, audio_url, transcript, user_display_name')
       .eq('is_public', true)
       .order('created_at', { ascending: false })
       .limit(20); // 限制返回数量，防止过载
